@@ -55,8 +55,8 @@ VstRDall = (VRDall[,8] - ((VRDall[,1]*5 + VRDall[,2]*5 + VRDall[,3]*5 + VRDall[,
 NonzeroVstCN = names(which(VstCNall>0))
 NonzeroVstRD = names(which(VstRDall>0))
 
-cnvCNreduced = cnvCN[(rownames(cnvCN) %in% NonzeroVarCN),]
-cnvRDreduced = cnvRD[(rownames(cnvRD) %in% NonzeroVarRD),]
+cnvCNreduced = cnvCN[(rownames(cnvCN) %in% NonzeroVstCN),]
+cnvRDreduced = cnvRD[(rownames(cnvRD) %in% NonzeroVstRD),]
 
 ####
 #calculate Vst (this is redundant from above but it only takes a few seconds)
