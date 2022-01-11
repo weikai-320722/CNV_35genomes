@@ -1,54 +1,22 @@
 #!/bin/bash
-# This options tells gridware to change to the current directory before
-# executing the job (default is the home of the user)
-#$-cwd
-#
-# This option declares the amount of memory the job will
-# use. Specify this value as accurat as possible. If you
-# declare too low memory usage, your job may be aborted.
-# If you declare too high memory usage, your job might be
-# wait for a long time until it is started on a machine
-# that has the sufficient amount of free memory.
-#$-l vf=2G
-#
-# Specify this option only for multithreaded jobs that use
-# more than one cpu core. The value 1..8 denotes the number
-# of requested cpu cores. Please note that multithreaded jobs
-# are always calculated on a single machine - for parallel
-# jobs you should use MPI instead.
-# Another important hint: memory request by -l vf=... are
-# multiplied by the number of requested cpu cores. Thus you
-# should divide the overall memory consumption of your job by
-# the number of parallel threads.
-#$-pe serial 12
-#
-# -- Job name ---
-#$ -N gene_family
-#$ -S /bin/bash
-#
-# Please insert your mail address!
-#$-M kai.wei@tum.de
-
-export PATH=/data/home/users/k.wei/.conda/envs/cnven/bin:$PATH
-tools=/data/home/users/k.wei/.conda/envs/cnven/bin
 
 ## makeblastdb establish BLAST dataset
-# $tools/makeblastdb -in differentiated_genes.fa -dbtype prot -out blastdb
+makeblastdb -in differentiated_genes.fa -dbtype prot -out blastdb
 
 ## blastp extract similar sequence
-# $tools/blastp -num_threads 12 -db blastdb -query protein.fa -outfmt 7 -seg yes -evalue 1e-5 > blast_output.txt
+blastp -num_threads 12 -db blastdb -query protein.fa -outfmt 7 -seg yes -evalue 1e-5 > blast_output.txt
 
 ## convert blast output into MCL (ABC) formart
-# grep -v "#"  blast_output.txt | cut -f 1,2,11 > blast_output.abc
+ grep -v "#"  blast_output.txt | cut -f 1,2,11 > blast_output.abc
 
 ## create .mci and .tab files for MCL cluster
-# $tools/mcxload -abc new/blast_output.abc --stream-mirror --stream-neg-log10 -stream-tf 'ceil(200)' -o blast_output.mci -write-tab blast_output.tab
+mcxload -abc blast_output.abc --stream-mirror --stream-neg-log10 -stream-tf 'ceil(200)' -o blast_output.mci -write-tab blast_output.tab
 
 
 ## MCL clustering
-# $tools/mcl new/blast_output.mci -I 3
+mcl new/blast_output.mci -I 3
 
 ## convert gene index to gene ID
-# $tools/mcxdump -icl out.blast_output.mci.I30 -tabr new/blast_output.tab -o dump.blast_output.mci.I30
+mcxdump -icl out.blast_output.mci.I30 -tabr blast_output.tab -o dump.blast_output.mci.I30
 
 
