@@ -1,0 +1,190 @@
+#!/bin/bash
+# This options tells gridware to change to the current directory before
+# executing the job (default is the home of the user)
+#$-cwd
+#
+# This option declares the amount of memory the job will
+# use. Specify this value as accurat as possible. If you
+# declare too low memory usage, your job may be aborted.
+# If you declare too high memory usage, your job might be
+# wait for a long time until it is started on a machine
+# that has the sufficient amount of free memory.
+#$-l vf=5G
+#
+# Specify this option only for multithreaded jobs that use
+# more than one cpu core. The value 1..8 denotes the number
+# of requested cpu cores. Please note that multithreaded jobs
+# are always calculated on a single machine - for parallel
+# jobs you should use MPI instead.
+# Another important hint: memory request by -l vf=... are
+# multiplied by the number of requested cpu cores. Thus you
+# should divide the overall memory consumption of your job by
+# the number of parallel threads.
+#$-pe serial 10
+#$-q bigmem
+#
+# -- Job name ---
+#$ -N lumpy
+#$ -S /bin/bash
+#
+# Please insert your mail address!
+#$-M kai.wei@tum.de
+
+export PATH=/data/home/users/k.wei/.conda/envs/cnven/bin:/data/home/users/k.wei/.conda/envs/cnven/lib/python2.7
+bamfile=/data/proj/chilense/30_genomes_outputs/bam_files/map2Schil_V2
+ref=/data/proj/chilense/30_genomes_outputs/reference/S_chilense_new/S_chilense_reference_rename.fasta
+samtools=/data/home/users/k.wei/Tools/samtools-1.7
+split=/data/home/users/k.wei/Tools/speedseq/src/lumpy-sv/scripts
+
+config=/data/home/users/k.wei/.conda/envs/cnven/bin
+manta=/data/home/users/k.wei/.conda/envs/cnven/bin
+wham=/data/home/users/k.wei/.conda/envs/cnven/bin
+delly=/data/home/users/k.wei/.conda/envs/newenv/bin
+
+######### Lumpy pipeline #########
+
+### Pre-processing bam files
+
+# Extract the discordant paired-end alignments
+ indiv=`cat 35bams`
+ for line in $indiv;do
+ $samtools/samtools view -b -F 1144 $bamfile/$line.markdup.bam > discordants/$line.discordants.unsorted.bam
+ done
+
+# Extract the split-read alignments
+ indiv=`cat 35bams`
+ for line in $indiv;do
+ $samtools/samtools view -h $bamfile/$line.markdup.bam \
+ | $split/extractSplitReads_BwaMem -i stdin \
+ | $samtools/samtools view -Sb - \
+ > splitters/$line.splitters.unsorted.bam 
+ done
+
+# Sort both alignments
+ indiv=`cat 35bams`
+ for line in $indiv;do
+ $samtools/samtools sort discordants/$line.discordants.unsorted.bam > discordants/$line.discordants.bam
+ $samtools/samtools sort splitters/$line.splitters.unsorted.bam > splitters/$line.splitters.bam
+ done
+
+### Running Lumpy of per individual
+ indiv=`cat 35bams`
+ for line in $indiv;do
+    /data/home/users/k.wei/Tools/lumpy-sv/bin/lumpyexpress \
+    -B $bamfile/$line.markdup.bam \
+    -S splitters/$line.splitters.bam \
+    -D discordants/$line.discordants.bam \
+    -R $ref
+    -o individuals/$line.vcf
+ done
+
+### Running Lumpy with multiple bams for genotyping
+   /data/home/users/k.wei/Tools/lumpy-sv/bin/lumpyexpress \
+    -B $bamfile/1963_t1.markdup.bam,$bamfile/1963_t3.markdup.bam,$bamfile/1963_t5.markdup.bam,$bamfile/1963_t7.markdup.bam,$bamfile/1963_t9.markdup.bam,$bamfile/2931_t2.markdup.bam,$bamfile/2931_t3.markdup.bam,$bamfile/2931_t4.markdup.bam,$bamfile/2931_t5.markdup.bam,$bamfile/2931_t6.markdup.bam,$bamfile/2932_1.markdup.bam,$bamfile/2932_8.markdup.bam,$bamfile/2932_12.markdup.bam,$bamfile/2932_20.markdup.bam,$bamfile/2932_22.markdup.bam,$bamfile/3111_t3.markdup.bam,$bamfile/3111_t5.markdup.bam,$bamfile/3111_t9.markdup.bam,$bamfile/3111_t10.markdup.bam,$bamfile/3111_t15.markdup.bam,$bamfile/4107_3.markdup.bam,$bamfile/4107_6.markdup.bam,$bamfile/4107_9.markdup.bam,$bamfile/4107_t5.markdup.bam,$bamfile/4107_t11.markdup.bam,$bamfile/4117A_1new.markdup.bam,$bamfile/4117A_4new.markdup.bam,$bamfile/4117A_5new.markdup.bam,$bamfile/4117A_10new.markdup.bam,$bamfile/4117A_15new.markdup.bam,$bamfile/4330_t1.markdup.bam,$bamfile/4330_t4.markdup.bam,$bamfile/4330_t6.markdup.bam,$bamfile/4330_t9.markdup.bam,$bamfile/4330_t12.markdup.bam \
+    -S splitters/1963_t1.splitters.bam,splitters/1963_t3.splitters.bam,splitters/1963_t5.splitters.bam,splitters/1963_t7.splitters.bam,splitters/1963_t9.splitters.bam,splitters/2931_t2.splitters.bam,splitters/2931_t3.splitters.bam,splitters/2931_t4.splitters.bam,splitters/2931_t5.splitters.bam,splitters/2931_t6.splitters.bam,splitters/2932_1.splitters.bam,splitters/2932_8.splitters.bam,splitters/2932_12.splitters.bam,splitters/2932_20.splitters.bam,splitters/2932_22.splitters.bam,splitters/3111_t3.splitters.bam,splitters/3111_t5.splitters.bam,splitters/3111_t9.splitters.bam,splitters/3111_t10.splitters.bam,splitters/3111_t15.splitters.bam,splitters/4107_3.splitters.bam,splitters/4107_6.splitters.bam,splitters/4107_9.splitters.bam,splitters/4107_t5.splitters.bam,splitters/4107_t11.splitters.bam,splitters/4117A_1new.splitters.bam,splitters/4117A_4new.splitters.bam,splitters/4117A_5new.splitters.bam,splitters/4117A_10new.splitters.bam,splitters/4117A_15new.splitters.bam,splitters/4330_t1.splitters.bam,splitters/4330_t4.splitters.bam,splitters/4330_t6.splitters.bam,splitters/4330_t9.splitters.bam,splitters/4330_t12.splitters.bam \
+    -D discordants/1963_t1.discordants.bam,discordants/1963_t3.discordants.bam,discordants/1963_t5.discordants.bam,discordants/1963_t7.discordants.bam,discordants/1963_t9.discordants.bam,discordants/2931_t2.discordants.bam,discordants/2931_t3.discordants.bam,discordants/2931_t4.discordants.bam,discordants/2931_t5.discordants.bam,discordants/2931_t6.discordants.bam,discordants/2932_1.discordants.bam,discordants/2932_8.discordants.bam,discordants/2932_12.discordants.bam,discordants/2932_20.discordants.bam,discordants/2932_22.discordants.bam,discordants/3111_t3.discordants.bam,discordants/3111_t5.discordants.bam,discordants/3111_t9.discordants.bam,discordants/3111_t10.discordants.bam,discordants/3111_t15.discordants.bam,discordants/4107_3.discordants.bam,discordants/4107_6.discordants.bam,discordants/4107_9.discordants.bam,discordants/4107_t5.discordants.bam,discordants/4107_t11.discordants.bam,discordants/4117A_1new.discordants.bam,discordants/4117A_4new.discordants.bam,discordants/4117A_5new.discordants.bam,discordants/4117A_10new.discordants.bam,discordants/4117A_15new.discordants.bam,discordants/4330_t1.discordants.bam,discordants/4330_t4.discordants.bam,discordants/4330_t6.discordants.bam,discordants/4330_t9.discordants.bam,discordants/4330_t12.discordants.bam \
+    -R /data/proj/chilense/30_genomes_outputs/reference/S_chilense_new/S_chilense_reference_rename.fasta -o lumpy_output.vcf
+
+### Genotyping output from lumpy using svtyper
+# extract CNVs from lumpy output
+grep -E '#|DEL|DUP|PASS' lumpy_output.vcf > lumpy_CNV.vcf
+
+# Running genotyping using svtyper
+/data/home/users/k.wei/.conda/envs/newenv/bin/svtyper \
+  -i /data/proj/chilense/30_genomes_outputs/kai_wei/variant_call/CNVs/lumpy/lumpy_CNV.vcf \
+  -B $bamfile/1963_t1.markdup.bam,$bamfile/1963_t3.markdup.bam,$bamfile/1963_t5.markdup.bam,$bamfile/1963_t7.markdup.bam,$bamfile/1963_t9.markdup.bam,$bamfile/2931_t2.markdup.bam,$bamfile/2931_t3.markdup.bam,$bamfile/2931_t4.markdup.bam,$bamfile/2931_t5.markdup.bam,$bamfile/2931_t6.markdup.bam,$bamfile/2932_1.markdup.bam,$bamfile/2932_8.markdup.bam,$bamfile/2932_12.markdup.bam,$bamfile/2932_20.markdup.bam,$bamfile/2932_22.markdup.bam,$bamfile/3111_t3.markdup.bam,$bamfile/3111_t5.markdup.bam,$bamfile/3111_t9.markdup.bam,$bamfile/3111_t10.markdup.bam,$bamfile/3111_t15.markdup.bam,$bamfile/4107_3.markdup.bam,$bamfile/4107_6.markdup.bam,$bamfile/4107_9.markdup.bam,$bamfile/4107_t5.markdup.bam,$bamfile/4107_t11.markdup.bam,$bamfile/4117A_1new.markdup.bam,$bamfile/4117A_4new.markdup.bam,$bamfile/4117A_5new.markdup.bam,$bamfile/4117A_10new.markdup.bam,$bamfile/4117A_15new.markdup.bam,$bamfile/4330_t1.markdup.bam,$bamfile/4330_t4.markdup.bam,$bamfile/4330_t6.markdup.bam,$bamfile/4330_t9.markdup.bam,$bamfile/4330_t12.markdup.bam \
+  -T $ref \
+  -o lumpy_CNV_gt.vcf
+
+######### WHAM pipeline #########
+
+### Running WHAM of per individual
+
+export EXCLUDE=chloroplast\_pilon
+  for line in `cat 35bams`;do
+ $wham/whamg -x 2 -m 20 -e $EXCLUDE -a $ref -f $bamfile/$line.markdup.bam > $line.sv.vcf 2> $line.err
+ done
+
+### Running WHAM with multiple bam files for genotyping
+$wham/whamg -e $EXCLUDE -a $ref -f $bamfile/1963_t1.markdup.bam,$bamfile/1963_t3.markdup.bam,$bamfile/1963_t5.markdup.bam,$bamfile/1963_t7.markdup.bam,$bamfile/1963_t9.markdup.bam,$bamfile/2931_t2.markdup.bam,$bamfile/2931_t3.markdup.bam,$bamfile/2931_t4.markdup.bam,$bamfile/2931_t5.markdup.bam,$bamfile/2931_t6.markdup.bam,$bamfile/2932_1.markdup.bam,$bamfile/2932_8.markdup.bam,$bamfile/2932_12.markdup.bam,$bamfile/2932_20.markdup.bam,$bamfile/2932_22.markdup.bam,$bamfile/3111_t3.markdup.bam,$bamfile/3111_t5.markdup.bam,$bamfile/3111_t9.markdup.bam,$bamfile/3111_t10.markdup.bam,$bamfile/3111_t15.markdup.bam,$bamfile/4107_3.markdup.bam,$bamfile/4107_6.markdup.bam,$bamfile/4107_9.markdup.bam,$bamfile/4107_t5.markdup.bam,$bamfile/4107_t11.markdup.bam,$bamfile/4117A_1new.markdup.bam,$bamfile/4117A_4new.markdup.bam,$bamfile/4117A_5new.markdup.bam,$bamfile/4117A_10new.markdup.bam,$bamfile/4117A_15new.markdup.bam,$bamfile/4330_t1.markdup.bam,$bamfile/4330_t4.markdup.bam,$bamfile/4330_t6.markdup.bam,$bamfile/4330_t9.markdup.bam,$bamfile/4330_t12.markdup.bam > wham.sv.vcf 2 > wham.err
+
+### Genotyping output from WHAM using svtyper
+# extract CNVs from lumpy output
+grep -E '#|DEL|DUP|PASS' wham.sv.vcf > wham_CNV.vcf
+
+# Running genotyping
+/data/home/users/k.wei/.conda/envs/newenv/bin/svtyper \
+  -i /data/proj/chilense/30_genomes_outputs/kai_wei/variant_call/CNVs/wham/wham_CNV.vcf \
+  -B $bamfile/1963_t1.markdup.bam,$bamfile/1963_t3.markdup.bam,$bamfile/1963_t5.markdup.bam,$bamfile/1963_t7.markdup.bam,$bamfile/1963_t9.markdup.bam,$bamfile/2931_t2.markdup.bam,$bamfile/2931_t3.markdup.bam,$bamfile/2931_t4.markdup.bam,$bamfile/2931_t5.markdup.bam,$bamfile/2931_t6.markdup.bam,$bamfile/2932_1.markdup.bam,$bamfile/2932_8.markdup.bam,$bamfile/2932_12.markdup.bam,$bamfile/2932_20.markdup.bam,$bamfile/2932_22.markdup.bam,$bamfile/3111_t3.markdup.bam,$bamfile/3111_t5.markdup.bam,$bamfile/3111_t9.markdup.bam,$bamfile/3111_t10.markdup.bam,$bamfile/3111_t15.markdup.bam,$bamfile/4107_3.markdup.bam,$bamfile/4107_6.markdup.bam,$bamfile/4107_9.markdup.bam,$bamfile/4107_t5.markdup.bam,$bamfile/4107_t11.markdup.bam,$bamfile/4117A_1new.markdup.bam,$bamfile/4117A_4new.markdup.bam,$bamfile/4117A_5new.markdup.bam,$bamfile/4117A_10new.markdup.bam,$bamfile/4117A_15new.markdup.bam,$bamfile/4330_t1.markdup.bam,$bamfile/4330_t4.markdup.bam,$bamfile/4330_t6.markdup.bam,$bamfile/4330_t9.markdup.bam,$bamfile/4330_t12.markdup.bam \
+  -T $ref \
+  -o wham_CNV_gt.vcf
+
+######### manta pipeline #########
+
+### Generate runnable config file for each bam file
+ for line in `cat 35bams`;do
+ mkdir $line
+ $config/configManta.py \
+ --bam $bamfile/$line.markdup.bam \
+ --referenceFasta $ref \
+ --runDir $line
+ done
+
+### Running config file for each individuals to identify CNVs
+indiv=`cat 35bams`
+for line in $indiv;do
+/data/proj/chilense/30_genomes_outputs/kai_wei/variant_call/CNVs/manta/$line/runWorkflow.py -g 30 -j 15
+done 
+
+######### Delly pipeline #########
+for line in `cat 35bams`;do
+ $delly/delly call -g $ref -q 20 -o $line.bcf $bamfile/$line.markdup.bam
+done
+
+## bcf outputed from delly to vcf
+ for line in `cat 35bams`;do
+ bcftools view $line.bcf > individuals/$line.vcf
+ done
+
+### Genotyping output from Delly
+
+# merging 35 sample
+$delly/delly merge -o dup.bcf -m 50 -p -t DUP 1963_t1.bcf 1963_t3.bcf 1963_t5.bcf 1963_t7.bcf 1963_t9.bcf 2931_t2.bcf 2931_t3.bcf 2931_t4.bcf 2931_t5.bcf 2931_t6.bcf 2932_12.bcf 2932_1.bcf 2932_20.bcf 2932_22.bcf 2932_8.bcf 3111_t10.bcf 3111_t15.bcf 3111_t3.bcf 3111_t5.bcf 3111_t9.bcf 4107_3.bcf 4107_6.bcf 4107_9.bcf 4107_t11.bcf 4107_t5.bcf 4117A_10.bcf 4117A_15.bcf 4117A_1.bcf 4117A_4.bcf 4117A_5.bcf 4330_t12.bcf 4330_t1.bcf 4330_t4.bcf 4330_t6.bcf 4330_t9.bcf
+
+$delly/delly merge -o dup.bcf -m 50 -p -t DEL 1963_t1.bcf 1963_t3.bcf 1963_t5.bcf 1963_t7.bcf 1963_t9.bcf 2931_t2.bcf 2931_t3.bcf 2931_t4.bcf 2931_t5.bcf 2931_t6.bcf 2932_12.bcf 2932_1.bcf 2932_20.bcf 2932_22.bcf 2932_8.bcf 3111_t10.bcf 3111_t15.bcf 3111_t3.bcf 3111_t5.bcf 3111_t9.bcf 4107_3.bcf 4107_6.bcf 4107_9.bcf 4107_t11.bcf 4107_t5.bcf 4117A_10.bcf 4117A_15.bcf 4117A_1.bcf 4117A_4.bcf 4117A_5.bcf 4330_t12.bcf 4330_t1.bcf 4330_t4.bcf 4330_t6.bcf 4330_t9.bcf
+
+# genotyping merged deletion and duplication for each sample
+for line in `cat 35bams`;do
+ $delly/delly call -g $ref -t DEL -v del.bcf -o $line.del.geno.bcf $bamfile/$line.markdup.bam
+ $delly/delly call -g $ref -t DUP -v dup.bcf -o $line.dup.geno.bcf $bamfile/$line.markdup.bam
+done
+
+# merging 35 genotyped bcf files using bcftools
+bcftools merge -m id -O v -o merged.DEL.geno.vcf 1963_t1.del.geno.bcf 1963_t3.del.geno.bcf 1963_t5.del.geno.bcf 1963_t7.del.geno.bcf 1963_t9.del.geno.bcf 2931_t2.del.geno.bcf 2931_t3.del.geno.bcf 2931_t4.del.geno.bcf 2931_t5.del.geno.bcf 2931_t6.del.geno.bcf 2932_12.del.geno.bcf 2932_1.del.geno.bcf 2932_20.del.geno.bcf 2932_22.del.geno.bcf 2932_8.del.geno.bcf 3111_t10.del.geno.bcf 3111_t15.del.geno.bcf 3111_t3.del.geno.bcf 3111_t5.del.geno.bcf 3111_t9.del.geno.bcf 4107_3.del.geno.bcf 4107_6.del.geno.bcf 4107_9.del.geno.bcf 4107_t11.del.geno.bcf 4107_t5.del.geno.bcf 4117A_10new.del.geno.bcf 4117A_15new.del.geno.bcf 4117A_1new.del.geno.bcf 4117A_4new.del.geno.bcf 4117A_5new.del.geno.bcf 4330_t12.del.geno.bcf 4330_t1.del.geno.bcf 4330_t4.del.geno.bcf 4330_t6.del.geno.bcf 4330_t9.del.geno.bcf
+
+ bcftools merge -m id -O v -o merged.DUP.geno.vcf 1963_t1.dup.geno.bcf 1963_t3.dup.geno.bcf 1963_t5.dup.geno.bcf 1963_t7.dup.geno.bcf 1963_t9.dup.geno.bcf 2931_t2.dup.geno.bcf 2931_t3.dup.geno.bcf 2931_t4.dup.geno.bcf 2931_t5.dup.geno.bcf 2931_t6.dup.geno.bcf 2932_12.dup.geno.bcf 2932_1.dup.geno.bcf 2932_20.dup.geno.bcf 2932_22.dup.geno.bcf 2932_8.dup.geno.bcf 3111_t10.dup.geno.bcf 3111_t15.dup.geno.bcf 3111_t3.dup.geno.bcf 3111_t5.dup.geno.bcf 3111_t9.dup.geno.bcf 4107_3.dup.geno.bcf 4107_6.dup.geno.bcf 4107_9.dup.geno.bcf 4107_t11.dup.geno.bcf 4107_t5.dup.geno.bcf 4117A_10new.dup.geno.bcf 4117A_15new.dup.geno.bcf 4117A_1new.dup.geno.bcf 4117A_4new.dup.geno.bcf 4117A_5new.dup.geno.bcf 4330_t12.dup.geno.bcf 4330_t1.dup.geno.bcf 4330_t4.dup.geno.bcf 4330_t6.dup.geno.bcf 4330_t9.dup.geno.bcf
+
+######### merge outputs from four tools of per individual and 35 samples #########
+
+### Writing vcfs from different tools to a file of per individual
+ for line in `cat 35bams`;do
+ ls $lumpy/$line.lumpy.vcf $manta/$line/results/variants/diploidSV.vcf $wham/$line.sv.vcf $delly/$line.vcf > $line.txt
+ done
+
+### Running SURVIVOR to merge different vcfs from different tools for per individual
+ for line in `cat 35bams`;do
+ /data/home/users/k.wei/Tools/SURVIVOR/Debug/SURVIVOR merge $line.txt 1000 2 1 1 0 50 $line.merged.vcf
+ done
+
+
+### Merge 35 individuals from SURVIVOR outputs
+ls *.vcf > vcflist.txt ##writing vcf files from output of last step
+/data/home/users/k.wei/Tools/SURVIVOR/Debug/SURVIVOR merge vcflist.txt 500 1 1 1 0 50 sample_merged_CNV.vcf
+
+### Genotyping output from merged output
+/data/home/users/k.wei/.conda/envs/newenv/bin/svtyper \
+  -i /data/proj/chilense/30_genomes_outputs/kai_wei/variant_call/CNVs/merge/sample_merged_CNV.vcf \
+  -B $bamfile/1963_t1.markdup.bam,$bamfile/1963_t3.markdup.bam,$bamfile/1963_t5.markdup.bam,$bamfile/1963_t7.markdup.bam,$bamfile/1963_t9.markdup.bam,$bamfile/2931_t2.markdup.bam,$bamfile/2931_t3.markdup.bam,$bamfile/2931_t4.markdup.bam,$bamfile/2931_t5.markdup.bam,$bamfile/2931_t6.markdup.bam,$bamfile/2932_1.markdup.bam,$bamfile/2932_8.markdup.bam,$bamfile/2932_12.markdup.bam,$bamfile/2932_20.markdup.bam,$bamfile/2932_22.markdup.bam,$bamfile/3111_t3.markdup.bam,$bamfile/3111_t5.markdup.bam,$bamfile/3111_t9.markdup.bam,$bamfile/3111_t10.markdup.bam,$bamfile/3111_t15.markdup.bam,$bamfile/4107_3.markdup.bam,$bamfile/4107_6.markdup.bam,$bamfile/4107_9.markdup.bam,$bamfile/4107_t5.markdup.bam,$bamfile/4107_t11.markdup.bam,$bamfile/4117A_1new.markdup.bam,$bamfile/4117A_4new.markdup.bam,$bamfile/4117A_5new.markdup.bam,$bamfile/4117A_10new.markdup.bam,$bamfile/4117A_15new.markdup.bam,$bamfile/4330_t1.markdup.bam,$bamfile/4330_t4.markdup.bam,$bamfile/4330_t6.markdup.bam,$bamfile/4330_t9.markdup.bam,$bamfile/4330_t12.markdup.bam \
+  -T $ref \
+  -o sample_merged_CNV_gt.vcf
+
