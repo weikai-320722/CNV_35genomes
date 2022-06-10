@@ -1,0 +1,38 @@
+#!/bin/bash
+# This options tells gridware to change to the current directory before
+# executing the job (default is the home of the user)
+#$-cwd
+#
+# This option declares the amount of memory the job will
+# use. Specify this value as accurat as possible. If you
+# declare too low memory usage, your job may be aborted.
+# If you declare too high memory usage, your job might be
+# wait for a long time until it is started on a machine
+# that has the sufficient amount of free memory.
+#$-l vf=5G
+#
+# Specify this option only for multithreaded jobs that use
+# more than one cpu core. The value 1..8 denotes the number
+# of requested cpu cores. Please note that multithreaded jobs
+# are always calculated on a single machine - for parallel
+# jobs you should use MPI instead.
+# Another important hint: memory request by -l vf=... are
+# multiplied by the number of requested cpu cores. Thus you
+# should divide the overall memory consumption of your job by
+# the number of parallel threads.
+#$-pe serial 10
+#$-q bigmem
+#
+# -- Job name ---
+#$ -N jismine
+#$ -S /bin/bash
+#
+# Please insert your mail address!
+#$-M kai.wei@tum.de
+
+conda activate newenv
+export PATH=$PATH:/data/home/users/k.wei/.conda/envs/newenv/bin/samtools
+##merge 35 individuals from SURVIVOR outputs
+# /data/home/users/k.wei/.conda/envs/newenv/bin/jasmine file_list=vcflist.txt genome_file=/data/proj/chilense/30_genomes_outputs/reference/S_chilense_new/S_chilense_reference_rename.fasta bam_list=bamlist.txt --run_iris min_support=1 max_dist=500 k_jaccard=8 min_seq_id=0.25 spec_len=50 --output_genotypes out_file=merged_samples.vcf
+
+/data/home/users/k.wei/.conda/envs/newenv/bin/jasmine file_list=vcflist.txt min_support=1 max_dist=500 k_jaccard=8 min_seq_id=0.25 spec_len=50 out_file=merged_samples.vcf
