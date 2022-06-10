@@ -1,0 +1,37 @@
+#!/bin/bash
+# This options tells gridware to change to the current directory before
+# executing the job (default is the home of the user)
+#$-cwd
+#
+# This option declares the amount of memory the job will
+# use. Specify this value as accurat as possible. If you
+# declare too low memory usage, your job may be aborted.
+# If you declare too high memory usage, your job might be
+# wait for a long time until it is started on a machine
+# that has the sufficient amount of free memory.
+#$-l vf=2G
+#
+# Specify this option only for multithreaded jobs that use
+# more than one cpu core. The value 1..8 denotes the number
+# of requested cpu cores. Please note that multithreaded jobs
+# are always calculated on a single machine - for parallel
+# jobs you should use MPI instead.
+# Another important hint: memory request by -l vf=... are
+# multiplied by the number of requested cpu cores. Thus you
+# should divide the overall memory consumption of your job by
+# the number of parallel threads.
+#$-pe serial 12
+#
+# -- Job name ---
+#$ -N CN
+#$ -S /bin/bash
+#
+# Please insert your mail address!
+#$-M kai.wei@tum.de
+
+bed=/data/proj/chilense/30_genomes_outputs/kai_wei/variant_call/CNVs/metaSV/filtering/bed
+## split chromosome to 2MB windows
+/data/home/users/k.wei/Tools/bedtools2-master/bin/bedtools makewindows -b chrom.txt -w 2000000 > window.bed
+
+## summary count of overlap between cnv regions and windows
+/data/home/users/k.wei/Tools/bedtools2-master/bin/bedtools intersect -a window.bed -b $bed/LA4107_DEL.bed -c > LA4107_DEL.chrom.txt
